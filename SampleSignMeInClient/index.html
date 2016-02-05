@@ -1,0 +1,90 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <meta charset="utf-8"/>
+    <script src="Scripts/jquery-2.2.0.min.js"></script>
+    <script>
+        /*
+            This is a very simple example to show how to use the authentication features of the web api.
+            The basic flow of information is:
+                - user enters email and password
+                - when user clicks button javascript code sends POST request to authenticate URL sending the JSON data:
+                    {
+                        'grant_type': 'password',
+                        'username': '$userEmail',
+                        'password': '$userPassword'
+                    }
+                - If the credentials sent to the server are valid the server sends back a JSON object with an 'access_token'
+                - Each request made in the future that requires authentication will be sent the access_token as a http header.
+                - The header is formatted as: Authorization: 'bearer $access_token'
+
+                In the following example. I authenticate a set of credentials, output the value of the access_token below the
+                authenticate button and store it in the auth_token variable, then when the Get Rooms button is clicked, I send
+                a GET request to /api/rooms setting  the value of the Authorization HTTP header to 'bearer ' + auth_token
+                (the word 'bearer' must come before the actual access token followed by a space).
+                If the request was successful I output the JSON returned under the get rooms button.
+
+                Currently the only credentials that work are s00143598@mail.itsligo.ie with the password chickensalad.
+        */
+
+        var auth_token;
+
+        function authenticate() {
+            // Ajax request to authenticate the user
+            $.ajax({
+                url: "http://signmeinwebapi.azurewebsites.net/authenticate",
+                type: "POST",
+                data: {
+                    "grant_type": "password",
+                    "username": $('#username').val(),
+                    "password": $('#password').val()
+                },
+                success: function(data) {
+                    $('#authStatus').html('true');
+                    auth_token = data['access_token'];
+                    $('#token').html(auth_token);
+                },
+            });
+        }
+
+        function getUsers() {
+            $.ajax({
+                url: "http://signmeinwebapi.azurewebsites.net/api/rooms",
+                method: "GET",
+                headers: {
+                    "Authorization": "bearer " + auth_token // Sets the 'Authorization' HTTP header to "bearer [auth_token]", which is the required format to authenticate the user
+                },
+                success: function(data) {
+                    $('#users').html(JSON.stringify(data));
+                },
+                error: function (jqXHR) {
+                    // Check if the status code is 401 (Unauthorized)
+                    if (jqXHR.status == '401')
+                        $('#users').html('You are not authenticated. Please log in with your valid email and password above');
+                    else
+                        // Handle any other error status code
+                        $('#users').html('An error occurred');
+                }
+            });
+        }
+    </script>
+</head>
+<body>
+<div>
+    Email: <input type="text" id="username"/><br/>
+    Password: <input type="password" id="password"/><br/>
+
+    <button id="btnSignIn" onclick="authenticate()">Authenticate</button>
+    <br/>
+    Authenticated? <label id="authStatus">false</label>
+    <br/>
+    Bearer token: <label id="token"></label>
+    <br/>
+    <br/>
+    <br/>
+    <button onclick="getUsers()">Get Rooms</button><br/>
+    <label id="users"></label>
+</div>
+</body>
+</html>
